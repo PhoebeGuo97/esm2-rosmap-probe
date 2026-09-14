@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+uniprot_human_reviewed.tsv
+unmatched_genes.txt

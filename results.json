@@ -1,0 +1,57 @@
+{
+  "config": {
+    "positives": "proteins_ad_pd_concordant.txt",
+    "background": null,
+    "model": "facebook/esm2_t12_35M_UR50D",
+    "ratio": 3.0,
+    "folds": 5,
+    "epochs": 3,
+    "max_len": 512,
+    "batch_size": 8,
+    "unfreeze": 2,
+    "lr": 5e-05,
+    "bootstrap": 2000,
+    "seed": 0,
+    "skip_finetune": false,
+    "quick": false
+  },
+  "device": "mps",
+  "background_source": "length-matched random reviewed human proteome (ratio 3.0:1)",
+  "n_total": 756,
+  "n_positive": 189,
+  "n_unmatched_symbols": 0,
+  "results": {
+    "frozen": {
+      "auroc": 0.6726202140664223,
+      "auprc": 0.39089581655135486,
+      "brier": 0.2507271822306375,
+      "ece": 0.22187837412444988,
+      "prevalence": 0.25,
+      "n": 756,
+      "auroc_ci95": [
+        0.6305697773306074,
+        0.7124457979801238
+      ]
+    },
+    "fine-tuned": {
+      "auroc": 0.7195953827347126,
+      "auprc": 0.4156561913399198,
+      "brier": 0.2123661486258926,
+      "ece": 0.20060977850740078,
+      "prevalence": 0.25,
+      "n": 756,
+      "auroc_ci95": [
+        0.6808742983089917,
+        0.7569992743448665
+      ]
+    },
+    "frozen (label permutation control)": {
+      "auroc": 0.5045118184447991,
+      "auprc": 0.2652965133371703,
+      "brier": 0.338187340841118,
+      "ece": 0.33106206511889896,
+      "prevalence": 0.25,
+      "n": 756
+    }
+  }
+}
