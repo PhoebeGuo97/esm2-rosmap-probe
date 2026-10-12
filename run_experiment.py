@@ -10,15 +10,16 @@ Two models are compared on identical cross-validation folds:
 
 Both are scored on discrimination (AUROC, AUPRC) and calibration
 (Brier score, expected calibration error) from pooled out-of-fold predictions.
-A label-permutation control is run for each model as a negative control.
+A label-permutation control is run on the frozen model as a negative control.
 
 Usage
 -----
   python run_experiment.py                      # full run, defaults below
   python run_experiment.py --quick              # 8M model, 2 epochs, 3 folds
   python run_experiment.py --background my.txt  # supply your own negative set
+  python run_experiment.py --outdir results/x   # write outputs to a folder
 
-Outputs
+Outputs (in --outdir, default the current directory)
 -------
   results.json          all metrics, config, and run metadata
   predictions.csv       per-protein out-of-fold predicted probabilities
@@ -387,9 +388,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--positives", default="proteins_ad_pd_concordant.txt")
     ap.add_argument("--background", default=None,
-                    help="optional file of gene symbols to use as negatives "
+                    help="file of gene symbols to draw negatives from "
                          "(strongly preferred: proteins quantified in ROSMAP "
-                         "but not concordant)")
+                         "but not concordant). Length-matched at --ratio "
+                         "unless --use-all-background is set")
+    ap.add_argument("--use-all-background", action="store_true",
+                    help="use every matched protein in --background as a "
+                         "negative instead of a length-matched subsample")
     ap.add_argument("--model", default="facebook/esm2_t12_35M_UR50D")
     ap.add_argument("--ratio", type=float, default=3.0)
     ap.add_argument("--folds", type=int, default=5)
@@ -402,7 +407,11 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--skip-finetune", action="store_true")
     ap.add_argument("--quick", action="store_true")
+    ap.add_argument("--outdir", default=".",
+                    help="folder for results.json, predictions.csv, figures/")
     args = ap.parse_args()
+    outdir = Path(args.outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
 
     if args.quick:
         args.model = "facebook/esm2_t6_8M_UR50D"
@@ -420,7 +429,7 @@ def main():
         if s.strip() and s.strip().lower() != "protein"
     ]
     pos, unmatched = resolve(symbols, proteome, index)
-    Path("unmatched_genes.txt").write_text("\n".join(unmatched) + "\n")
+    (outdir / "unmatched_genes.txt").write_text("\n".join(unmatched) + "\n")
     print(
         f"\nPositives: {len(symbols)} symbols submitted, {len(pos)} unique UniProt "
         f"entries matched, {len(unmatched)} unmatched"
@@ -432,9 +441,22 @@ def main():
         bg_syms = [s.strip() for s in Path(args.background).read_text().split() if s.strip()]
         neg, bg_unmatched = resolve(bg_syms, proteome, index)
         neg = neg[~neg["accession"].isin(pos["accession"])]
-        bg_source = f"user-supplied ({Path(args.background).name})"
-        print(f"Negatives: {len(neg)} matched from supplied background "
-              f"({len(bg_unmatched)} unmatched)")
+        n_pool = len(neg)
+        name = Path(args.background).name
+        print(f"Background pool: {len(bg_syms)} symbols supplied, {n_pool} matched "
+              f"and distinct from the positives ({len(bg_unmatched)} unmatched)")
+        if args.use_all_background:
+            bg_source = f"{name}, all {n_pool} proteins"
+            print(f"Negatives: all {n_pool}, prevalence "
+                  f"{len(pos) / (len(pos) + n_pool):.3f}")
+            if not args.skip_finetune:
+                print("  WARNING: fine-tuning on this many proteins takes hours. "
+                      "Consider --skip-finetune for the full-background run.")
+        else:
+            neg = length_matched_background(pos, neg, args.ratio, rng_py)
+            bg_source = (f"{name}, length-matched {args.ratio}:1 "
+                         f"subsample of {n_pool}")
+            print(f"Negatives: {len(neg)} length-matched from the pool of {n_pool}")
     else:
         pool = proteome[~proteome["accession"].isin(pos["accession"])]
         neg = length_matched_background(pos, pool, args.ratio, rng_py)
@@ -498,7 +520,7 @@ def main():
         "(expected near 0.500)"
     )
 
-    make_figures(y, preds, Path("figures"))
+    make_figures(y, preds, outdir / "figures")
 
     pd.DataFrame(
         {
@@ -508,9 +530,9 @@ def main():
             "label": y,
             **preds,
         }
-    ).to_csv("predictions.csv", index=False)
+    ).to_csv(outdir / "predictions.csv", index=False)
 
-    Path("results.json").write_text(
+    (outdir / "results.json").write_text(
         json.dumps(
             {
                 "config": vars(args),
@@ -524,7 +546,7 @@ def main():
             indent=2,
         )
     )
-    print("\nWrote results.json, predictions.csv, figures/, unmatched_genes.txt")
+    print(f"\nWrote results.json, predictions.csv, figures/, unmatched_genes.txt to {outdir}/")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,58 @@
+{
+  "config": {
+    "positives": "proteins_ad_pd_concordant.txt",
+    "background": "background_rosmap_quantified.txt",
+    "use_all_background": false,
+    "model": "facebook/esm2_t12_35M_UR50D",
+    "ratio": 3.0,
+    "folds": 5,
+    "epochs": 3,
+    "max_len": 512,
+    "batch_size": 8,
+    "unfreeze": 2,
+    "lr": 5e-05,
+    "bootstrap": 2000,
+    "seed": 0,
+    "skip_finetune": false,
+    "quick": false
+  },
+  "device": "mps",
+  "background_source": "background_rosmap_quantified.txt, length-matched 3.0:1 subsample of 8031",
+  "n_total": 756,
+  "n_positive": 189,
+  "n_unmatched_symbols": 0,
+  "results": {
+    "frozen": {
+      "auroc": 0.6301148717374467,
+      "auprc": 0.36406714179918304,
+      "brier": 0.26004670700789806,
+      "ece": 0.2257710528719464,
+      "prevalence": 0.25,
+      "n": 756,
+      "auroc_ci95": [
+        0.5843243823232022,
+        0.6765963042102853
+      ]
+    },
+    "fine-tuned": {
+      "auroc": 0.5978929294625944,
+      "auprc": 0.31393005572432653,
+      "brier": 0.2182562561801593,
+      "ece": 0.1858362906351291,
+      "prevalence": 0.25,
+      "n": 756,
+      "auroc_ci95": [
+        0.5490477150061962,
+        0.642563810904508
+      ]
+    },
+    "frozen (label permutation control)": {
+      "auroc": 0.47894329199443836,
+      "auprc": 0.23947437448414402,
+      "brier": 0.34210866272332285,
+      "ece": 0.3184449714943071,
+      "prevalence": 0.25,
+      "n": 756
+    }
+  }
+}
